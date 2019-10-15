@@ -362,7 +362,7 @@ export class PluggableXirr extends AbstractPluggableVisualization {
 
     protected renderVisualization(
         options: IVisProps,
-        visualizationProperties: IVisualizationProperties,
+        _visualizationProperties: IVisualizationProperties,
         mdObject: VisualizationObject.IVisualizationObjectContent,
     ) {
         const { dataSource } = options;
@@ -377,15 +377,6 @@ export class PluggableXirr extends AbstractPluggableVisualization {
                 ...resultSpec,
                 dimensions: this.getDimensions(mdObject),
             };
-
-            const sorts: AFM.SortItem[] = get(visualizationProperties, "sortItems", []) as AFM.SortItem[];
-
-            const resultSpecWithSorts = resultSpecWithDimensions.sorts
-                ? resultSpecWithDimensions
-                : {
-                      ...resultSpecWithDimensions,
-                      sorts,
-                  };
 
             const rowsBucket = mdObject.buckets.find(
                 bucket => bucket.localIdentifier === BucketNames.ATTRIBUTE,
@@ -414,14 +405,12 @@ export class PluggableXirr extends AbstractPluggableVisualization {
                 height,
                 locale,
                 dataSource,
-                resultSpec: resultSpecWithSorts,
+                resultSpec: resultSpecWithDimensions,
                 afterRender,
                 onLoadingChanged,
                 pushData,
                 onError,
                 onExportReady: this.onExportReady,
-                LoadingComponent: null as any,
-                ErrorComponent: null as any,
                 intl: this.intl,
             };
             render(<Xirr {...pivotTableProps} />, document.querySelector(this.element));
