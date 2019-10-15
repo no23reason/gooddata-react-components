@@ -83,6 +83,7 @@ export interface IChartConfig extends IMeasuresStackConfig {
     secondaryChartType?: VisualizationObject.VisualizationType;
     forceDisableDrillOnAxes?: boolean;
     disableDrillUnderline?: boolean;
+    redGreenLimit?: string;
 }
 
 export interface IStackLabels {
