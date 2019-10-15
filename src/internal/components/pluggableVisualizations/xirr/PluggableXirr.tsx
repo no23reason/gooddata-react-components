@@ -426,44 +426,7 @@ export class PluggableXirr extends AbstractPluggableVisualization {
                 ErrorComponent: null as any,
                 intl: this.intl,
             };
-
-            if (this.environment === "dashboards") {
-                if (isNil(height)) {
-                    render(
-                        <Measure client={true}>
-                            {({ measureRef, contentRect }: any) => {
-                                const usedHeight = Math.floor(contentRect.client.height || 0);
-                                const pivotWrapperStyle = {
-                                    height: "100%",
-                                    textAlign: "left",
-                                };
-
-                                return (
-                                    <div
-                                        ref={measureRef}
-                                        style={pivotWrapperStyle}
-                                        className="gd-table-dashboard-wrapper"
-                                    >
-                                        <Xirr {...pivotTableProps} height={usedHeight} />
-                                    </div>
-                                );
-                            }}
-                        </Measure>,
-                        document.querySelector(this.element),
-                    );
-
-                    return;
-                }
-
-                render(
-                    <div style={{ height: 328, textAlign: "left" }} className="gd-table-dashboard-wrapper">
-                        <Xirr {...pivotTableProps} />
-                    </div>,
-                    document.querySelector(this.element),
-                );
-            } else {
-                render(<Xirr {...pivotTableProps} />, document.querySelector(this.element));
-            }
+            render(<Xirr {...pivotTableProps} />, document.querySelector(this.element));
         }
     }
 
