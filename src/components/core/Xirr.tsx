@@ -55,10 +55,7 @@ export class XirrStateless extends BaseVisualization<
     }
 
     private computeXirr = (): number => {
-        if (!(this.props.execution && this.props.execution.executionResult)) {
-            return null;
-        }
-        const totals = this.props.execution.executionResult.totals[0][0] as any;
+        const totals = this.props.execution.executionResult.totals[0][0] as string[];
         const dates = this.props.execution.executionResult.headerItems[1][0].map(
             (h: Execution.IResultAttributeHeaderItem) => h.attributeHeaderItem.name,
         );

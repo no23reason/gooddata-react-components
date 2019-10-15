@@ -1,9 +1,6 @@
 // (C) 2019 GoodData Corporation
 import cloneDeep = require("lodash/cloneDeep");
 import get = require("lodash/get");
-import merge = require("lodash/merge");
-import flatMap = require("lodash/flatMap");
-import includes = require("lodash/includes");
 import * as React from "react";
 import { render, unmountComponentAtNode } from "react-dom";
 import { InjectedIntl } from "react-intl";
@@ -24,7 +21,6 @@ import {
     IVisualizationProperties,
     IBucketItem,
     IBucket,
-    IBucketFilter,
 } from "../../../interfaces/Visualization";
 
 import { ATTRIBUTE, DATE, METRIC } from "../../../constants/bucket";
@@ -42,7 +38,6 @@ import { createInternalIntl } from "../../../utils/internalIntlProvider";
 import { DEFAULT_PIVOT_TABLE_UICONFIG } from "../../../constants/uiConfig";
 import { AbstractPluggableVisualization } from "../AbstractPluggableVisualization";
 import { getReferencePointWithSupportedProperties } from "../../../utils/propertiesHelper";
-import { VisualizationEnvironment } from "../../../../components/uri/Visualization";
 import { VisualizationTypes } from "../../../../constants/visualizationTypes";
 import { generateDimensions } from "../../../../helpers/dimensions";
 import { DEFAULT_LOCALE } from "../../../../constants/localization";
@@ -64,183 +59,6 @@ export const getRowAttributes = (buckets: IBucket[]): IBucketItem[] => {
     );
 };
 
-// removes attribute sortItems with invalid identifiers
-// removes measure sortItems with invalid identifiers and invalid number of locators
-function adaptSortItemsToPivotTable(
-    originalSortItems: AFM.SortItem[],
-    measureLocalIdentifiers: string[],
-    rowAttributeLocalIdentifiers: string[],
-    columnAttributeLocalIdentifiers: string[],
-): AFM.SortItem[] {
-    const attributeLocalIdentifiers = [...rowAttributeLocalIdentifiers, ...columnAttributeLocalIdentifiers];
-
-    return originalSortItems.reduce((sortItems: AFM.SortItem[], sortItem: AFM.SortItem) => {
-        if (AFM.isMeasureSortItem(sortItem)) {
-            // filter out invalid locators
-            const filteredSortItem: AFM.IMeasureSortItem = {
-                measureSortItem: {
-                    ...sortItem.measureSortItem,
-                    locators: sortItem.measureSortItem.locators.filter(locator => {
-                        // filter out invalid measure locators
-                        if (AFM.isMeasureLocatorItem(locator)) {
-                            return includes(
-                                measureLocalIdentifiers,
-                                locator.measureLocatorItem.measureIdentifier,
-                            );
-                        }
-                        // filter out invalid column attribute locators
-                        return includes(
-                            columnAttributeLocalIdentifiers,
-                            locator.attributeLocatorItem.attributeIdentifier,
-                        );
-                    }),
-                },
-            };
-
-            // keep sortItem if measureLocator is present and locators are correct length
-            if (
-                filteredSortItem.measureSortItem.locators.some(locator =>
-                    AFM.isMeasureLocatorItem(locator),
-                ) &&
-                filteredSortItem.measureSortItem.locators.length ===
-                    columnAttributeLocalIdentifiers.length + 1
-            ) {
-                return [...sortItems, filteredSortItem];
-            }
-
-            // otherwise just carry over previous sortItems
-            return sortItems;
-        }
-        if (includes(attributeLocalIdentifiers, sortItem.attributeSortItem.attributeIdentifier)) {
-            return [...sortItems, sortItem];
-        }
-        return sortItems;
-    }, []);
-}
-
-export function adaptReferencePointSortItemsToPivotTable(
-    originalSortItems: AFM.SortItem[],
-    measures: IBucketItem[],
-    rowAttributes: IBucketItem[],
-    columnAttributes: IBucketItem[],
-): AFM.SortItem[] {
-    const measureLocalIdentifiers = measures.map(measure => measure.localIdentifier);
-    const rowAttributeLocalIdentifiers = rowAttributes.map(rowAttribute => rowAttribute.localIdentifier);
-    const columnAttributeLocalIdentifiers = columnAttributes.map(
-        columnAttribute => columnAttribute.localIdentifier,
-    );
-
-    return adaptSortItemsToPivotTable(
-        originalSortItems,
-        measureLocalIdentifiers,
-        rowAttributeLocalIdentifiers,
-        columnAttributeLocalIdentifiers,
-    );
-}
-
-const bucketItemGetter = <T extends VisualizationObject.BucketItem>(bucketId: string) => (
-    buckets: VisualizationObject.IBucket[],
-) => flatMap(buckets.filter(b => b.localIdentifier === bucketId), i => i.items) as T[];
-
-const getMeasures = bucketItemGetter<VisualizationObject.IMeasure>(BucketNames.MEASURES);
-const getRows = bucketItemGetter<VisualizationObject.IVisualizationAttribute>(BucketNames.ATTRIBUTE);
-const getColumns = bucketItemGetter<VisualizationObject.IVisualizationAttribute>(BucketNames.COLUMNS);
-
-function adaptMdObjectSortItemsToPivotTable(
-    originalSortItems: AFM.SortItem[],
-    buckets: VisualizationObject.IBucket[],
-): AFM.SortItem[] {
-    const measureLocalIdentifiers = getMeasures(buckets).map(measure => measure.measure.localIdentifier);
-    const rowAttributeLocalIdentifiers = getRows(buckets).map(
-        rowAttribute => rowAttribute.visualizationAttribute.localIdentifier,
-    );
-    const columnAttributeLocalIdentifiers = getColumns(buckets).map(
-        columnAttribute => columnAttribute.visualizationAttribute.localIdentifier,
-    );
-
-    return adaptSortItemsToPivotTable(
-        originalSortItems,
-        measureLocalIdentifiers,
-        rowAttributeLocalIdentifiers,
-        columnAttributeLocalIdentifiers,
-    );
-}
-
-const isAttributeSortItemVisible = (_sortItem: AFM.IAttributeSortItem, _filters: IBucketFilter[]): boolean =>
-    true;
-
-const isMeasureSortItemMatchedByFilter = (sortItem: AFM.IMeasureSortItem, filter: IBucketFilter): boolean =>
-    filter.selectedElements.some(selectedElement =>
-        sortItem.measureSortItem.locators.some(
-            locator =>
-                !AFM.isMeasureLocatorItem(locator) &&
-                locator.attributeLocatorItem.element === selectedElement.uri,
-        ),
-    );
-
-const isMeasureSortItemVisible = (sortItem: AFM.IMeasureSortItem, filters: IBucketFilter[]): boolean =>
-    filters.reduce((isVisible, filter) => {
-        const shouldBeMatched = !filter.isInverted;
-        return isVisible && shouldBeMatched === isMeasureSortItemMatchedByFilter(sortItem, filter);
-    }, true);
-
-export const isSortItemVisible = (sortItem: AFM.SortItem, filters: IBucketFilter[]): boolean =>
-    AFM.isAttributeSortItem(sortItem)
-        ? isAttributeSortItemVisible(sortItem, filters)
-        : isMeasureSortItemVisible(sortItem, filters);
-
-export function addDefaultSort(
-    sortItems: AFM.SortItem[],
-    filters: IBucketFilter[],
-    rowAttributes: IBucketItem[],
-    previousRowAttributes?: IBucketItem[],
-): AFM.SortItem[] {
-    // cannot construct default sort without a row
-    if (rowAttributes.length < 1) {
-        return sortItems;
-    }
-
-    // detect custom sort
-    const firstRow = rowAttributes[0];
-    const previousFirstRow = previousRowAttributes && previousRowAttributes[0];
-    const hasVisibleCustomSort = sortItems.some(sortItem => {
-        if (!isSortItemVisible(sortItem, filters)) {
-            return false;
-        }
-        // non attribute sort is definitely custom
-        if (!AFM.isAttributeSortItem(sortItem)) {
-            return true;
-        }
-        // asc sort on first row is considered default
-        if (
-            sortItem.attributeSortItem.attributeIdentifier === firstRow.localIdentifier &&
-            sortItem.attributeSortItem.direction === "asc"
-        ) {
-            return false;
-        }
-        // asc sort on row that was first until now is considered default as well
-        if (
-            previousFirstRow &&
-            sortItem.attributeSortItem.attributeIdentifier === previousFirstRow.localIdentifier &&
-            sortItem.attributeSortItem.direction === "asc"
-        ) {
-            return false;
-        }
-        return true;
-    });
-
-    return hasVisibleCustomSort
-        ? sortItems
-        : [
-              {
-                  attributeSortItem: {
-                      attributeIdentifier: firstRow.localIdentifier,
-                      direction: "asc",
-                  },
-              },
-          ];
-}
-
 export class PluggableXirr extends AbstractPluggableVisualization {
     private projectId: string;
     private element: string;
@@ -249,7 +67,6 @@ export class PluggableXirr extends AbstractPluggableVisualization {
     private intl: InjectedIntl;
     private visualizationProperties: IVisualizationProperties;
     private locale: ILocale;
-    private environment: VisualizationEnvironment;
 
     constructor(props: IVisConstruct) {
         super();
@@ -260,7 +77,6 @@ export class PluggableXirr extends AbstractPluggableVisualization {
         this.locale = props.locale ? props.locale : DEFAULT_LOCALE;
         this.intl = createInternalIntl(this.locale);
         this.onExportReady = props.callbacks.onExportReady && this.onExportReady.bind(this);
-        this.environment = props.environment;
     }
 
     public unmount() {
@@ -277,13 +93,10 @@ export class PluggableXirr extends AbstractPluggableVisualization {
     ) {
         this.visualizationProperties = visualizationProperties;
         this.renderVisualization(options, visualizationProperties, mdObject);
-        this.renderConfigurationPanel(mdObject);
+        this.renderConfigurationPanel();
     }
 
-    public getExtendedReferencePoint(
-        referencePoint: IReferencePoint,
-        previousReferencePoint?: IReferencePoint,
-    ): Promise<IExtendedReferencePoint> {
+    public getExtendedReferencePoint(referencePoint: IReferencePoint): Promise<IExtendedReferencePoint> {
         return Promise.resolve(
             produce<IExtendedReferencePoint>(
                 referencePoint as IExtendedReferencePoint,
@@ -293,8 +106,6 @@ export class PluggableXirr extends AbstractPluggableVisualization {
                     const buckets = referencePointDraft.buckets;
                     const measures = getAllItemsByType(buckets, [METRIC]);
                     const rowAttributes = getRowAttributes(buckets);
-                    const previousRowAttributes =
-                        previousReferencePoint && getRowAttributes(previousReferencePoint.buckets);
 
                     const columnAttributes = getColumnAttributes(buckets);
 
@@ -319,27 +130,7 @@ export class PluggableXirr extends AbstractPluggableVisualization {
                         },
                     ]);
 
-                    const originalSortItems: AFM.SortItem[] = get(
-                        referencePointDraft.properties,
-                        "sortItems",
-                        [],
-                    );
-
-                    referencePointDraft.properties = {
-                        sortItems: addDefaultSort(
-                            adaptReferencePointSortItemsToPivotTable(
-                                originalSortItems,
-                                measures,
-                                rowAttributes,
-                                columnAttributes,
-                            ),
-                            referencePointDraft.filters
-                                ? flatMap(referencePointDraft.filters.items, item => item.filters)
-                                : [],
-                            rowAttributes,
-                            previousRowAttributes,
-                        ),
-                    };
+                    referencePointDraft.properties = {};
 
                     setPivotTableUiConfig(referencePointDraft, this.intl, VisualizationTypes.TABLE);
                     configurePercent(referencePointDraft, false);
@@ -383,25 +174,11 @@ export class PluggableXirr extends AbstractPluggableVisualization {
             );
             const totals: VisualizationObject.IVisualizationTotal[] = (rowsBucket && rowsBucket.totals) || [];
 
-            let configUpdated = config;
-            if (this.environment !== "dashboards") {
-                // Menu aggregations turned off in KD
-                configUpdated = merge(
-                    {
-                        menu: {
-                            aggregations: true,
-                            aggregationsSubMenu: true,
-                        },
-                    },
-                    configUpdated,
-                );
-            }
-
             const pivotTableProps = {
                 projectId: this.projectId,
                 drillableItems,
                 totals,
-                config: configUpdated,
+                config,
                 height,
                 locale,
                 dataSource,
@@ -424,7 +201,7 @@ export class PluggableXirr extends AbstractPluggableVisualization {
         }
     }
 
-    protected renderConfigurationPanel(mdObject: VisualizationObject.IVisualizationObjectContent) {
+    protected renderConfigurationPanel() {
         if (document.querySelector(this.configPanelElement)) {
             const properties: IVisualizationProperties = get(
                 this.visualizationProperties,
@@ -432,19 +209,11 @@ export class PluggableXirr extends AbstractPluggableVisualization {
                 {},
             ) as IVisualizationProperties;
 
-            // we need to handle cases when attribute previously bearing the default sort is no longer available
-            const sanitizedProperties = properties.sortItems
-                ? {
-                      ...properties,
-                      sortItems: adaptMdObjectSortItemsToPivotTable(properties.sortItems, mdObject.buckets),
-                  }
-                : properties;
-
             render(
                 <UnsupportedConfigurationPanel
                     locale={this.locale}
                     pushData={this.callbacks.pushData}
-                    properties={sanitizedProperties}
+                    properties={properties}
                 />,
                 document.querySelector(this.configPanelElement),
             );
