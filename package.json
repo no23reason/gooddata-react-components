@@ -121,6 +121,7 @@
     "classnames": "^2.2.6",
     "custom-event": "^1.0.1",
     "downshift": "^3.2.7",
+    "date-fns": "^2.4.1",
     "fixed-data-table-2": "0.7.17",
     "highcharts": "7.1.1",
     "highcharts-grouped-categories": "^1.1.3",

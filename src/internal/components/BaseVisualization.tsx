@@ -38,6 +38,7 @@ import { PluggableTreemap } from "./pluggableVisualizations/treeMap/PluggableTre
 import { PluggableFunnelChart } from "./pluggableVisualizations/funnelChart/PluggableFunnelChart";
 import { PluggableBubbleChart } from "./pluggableVisualizations/bubbleChart/PluggableBubbleChart";
 import { PluggableRedGreen } from "./pluggableVisualizations/redGreen/PluggableRedGreen";
+import { PluggableXirr } from "./pluggableVisualizations/xirr/PluggableXirr";
 
 // visualization catalogue - add your new visualization here
 const VisualizationsCatalog = {
@@ -57,6 +58,7 @@ const VisualizationsCatalog = {
     treemap: PluggableTreemap,
     funnel: PluggableFunnelChart,
     redgreen: PluggableRedGreen,
+    xirr: PluggableXirr,
 };
 
 export interface IBaseVisualizationProps extends IVisCallbacks {
