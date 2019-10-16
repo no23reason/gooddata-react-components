@@ -384,6 +384,35 @@ export const DEFAULT_PIVOT_TABLE_UICONFIG: IUiConfig = {
     ],
 };
 
+export const DEFAULT_XIRR_UICONFIG: IUiConfig = {
+    buckets: {
+        measures: {
+            ...measuresBase,
+            allowsSwapping: true,
+            itemsLimit: 1,
+        },
+        attribute: {
+            ...viewBase,
+            allowsSwapping: true,
+            allowsReordering: true,
+            itemsLimit: 1,
+        },
+        columns: {
+            ...viewBase,
+            allowsSwapping: true,
+            allowsReordering: true,
+            itemsLimit: 1,
+        },
+        ...defaultFilters,
+    },
+    ...defaultRootUiConfigProperties,
+    ...disabledOpenAsReportConfig,
+    supportedOverTimeComparisonTypes: [
+        OverTimeComparisonTypes.SAME_PERIOD_PREVIOUS_YEAR,
+        OverTimeComparisonTypes.PREVIOUS_PERIOD,
+    ],
+};
+
 export const DEFAULT_TABLE_UICONFIG: IUiConfig = {
     buckets: {
         measures: {

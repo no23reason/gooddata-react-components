@@ -33,15 +33,15 @@ import {
     removeDuplicateBucketItems,
 } from "../../../utils/bucketHelper";
 
-import { setPivotTableUiConfig } from "../../../utils/uiConfigHelpers/pivotTableUiConfigHelper";
 import { createInternalIntl } from "../../../utils/internalIntlProvider";
-import { DEFAULT_PIVOT_TABLE_UICONFIG } from "../../../constants/uiConfig";
+import { DEFAULT_XIRR_UICONFIG } from "../../../constants/uiConfig";
 import { AbstractPluggableVisualization } from "../AbstractPluggableVisualization";
 import { getReferencePointWithSupportedProperties } from "../../../utils/propertiesHelper";
 import { VisualizationTypes } from "../../../../constants/visualizationTypes";
 import { generateDimensions } from "../../../../helpers/dimensions";
 import { DEFAULT_LOCALE } from "../../../../constants/localization";
 import { Xirr } from "../../../../components/core/Xirr";
+import { setXirrUiConfig } from "../../../utils/uiConfigHelpers/xirrUiConfigHelper";
 
 export const getColumnAttributes = (buckets: IBucket[]): IBucketItem[] => {
     return getItemsFromBuckets(
@@ -101,7 +101,7 @@ export class PluggableXirr extends AbstractPluggableVisualization {
             produce<IExtendedReferencePoint>(
                 referencePoint as IExtendedReferencePoint,
                 referencePointDraft => {
-                    referencePointDraft.uiConfig = cloneDeep(DEFAULT_PIVOT_TABLE_UICONFIG);
+                    referencePointDraft.uiConfig = cloneDeep(DEFAULT_XIRR_UICONFIG);
 
                     const buckets = referencePointDraft.buckets;
                     const measures = getAllItemsByType(buckets, [METRIC]);
@@ -110,6 +110,17 @@ export class PluggableXirr extends AbstractPluggableVisualization {
                     const columnAttributes = getColumnAttributes(buckets);
 
                     const totals = getTotalsFromBucket(buckets, BucketNames.ATTRIBUTE);
+
+                    // const totals: VisualizationObject.IVisualizationTotal[] =
+                    //     measures[0] && columnAttributes[0]
+                    //         ? [
+                    //               {
+                    //                   measureIdentifier: measures[0].localIdentifier,
+                    //                   attributeIdentifier: columnAttributes[0].localIdentifier,
+                    //                   type: "sum",
+                    //               },
+                    //           ]
+                    //         : [];
 
                     referencePointDraft.buckets = removeDuplicateBucketItems([
                         {
@@ -132,7 +143,7 @@ export class PluggableXirr extends AbstractPluggableVisualization {
 
                     referencePointDraft.properties = {};
 
-                    setPivotTableUiConfig(referencePointDraft, this.intl, VisualizationTypes.TABLE);
+                    setXirrUiConfig(referencePointDraft, this.intl, VisualizationTypes.TABLE);
                     configurePercent(referencePointDraft, false);
                     configureOverTimeComparison(referencePointDraft);
                     Object.assign(
